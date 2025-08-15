@@ -11,31 +11,34 @@ const defineBlock = (json: object) => {
   Blockly.common.defineBlocksWithJsonArray([json]);
 };
 
-const generateSpriteDropdown = function(this: Blockly.FieldDropdown) {
+const generateSpriteDropdown = function (this: Blockly.FieldDropdown) {
   const block = this.getSourceBlock();
   if (!block || !block.workspace) {
-    return [['(no workspace)', 'NULL_SPRITE']];
+    return [["(no workspace)", "NULL_SPRITE"]];
   }
-  
-  this.setValidator(function(this: Blockly.FieldDropdown, newValue) {
+
+  this.setValidator(function (this: Blockly.FieldDropdown, newValue) {
     const allOptions = this.getOptions(false);
-    const doesOptionExist = allOptions.some(option => option[1] === newValue);
+    const doesOptionExist = allOptions.some((option) => option[1] === newValue);
     if (doesOptionExist) {
       return newValue;
     }
     if (allOptions.length > 1) {
       return allOptions[0][1];
     }
-    return 'NULL_SPRITE';
+    return "NULL_SPRITE";
   });
 
-  const spriteCreateBlocks = block.workspace.getBlocksByType('sprite_create', false);
+  const spriteCreateBlocks = block.workspace.getBlocksByType(
+    "sprite_create",
+    false
+  );
   const spriteNames = new Set<string>();
 
-  spriteCreateBlocks.forEach(b => {
-    const nameBlock = b.getInputTargetBlock('NAME');
-    if (nameBlock && nameBlock.type === 'text') {
-      const name = nameBlock.getFieldValue('TEXT');
+  spriteCreateBlocks.forEach((b) => {
+    const nameBlock = b.getInputTargetBlock("NAME");
+    if (nameBlock && nameBlock.type === "text") {
+      const name = nameBlock.getFieldValue("TEXT");
       if (name) {
         spriteNames.add(name);
       }
@@ -43,10 +46,10 @@ const generateSpriteDropdown = function(this: Blockly.FieldDropdown) {
   });
 
   if (spriteNames.size === 0) {
-    return [['create a sprite first', 'NULL_SPRITE']];
+    return [["create a sprite first", "NULL_SPRITE"]];
   }
 
-  return Array.from(spriteNames).map(name => [name, name]);
+  return Array.from(spriteNames).map((name) => [name, name]);
 };
 // --- Game Lifecycle Blocks ---
 defineBlock({
@@ -67,6 +70,16 @@ defineBlock({
   previousStatement: null,
   nextStatement: null,
   tooltip: "Runs on every frame of the game.",
+  style: "hat_blocks",
+});
+defineBlock({
+  type: "game_on_assets_loaded",
+  message0: "when all assets loaded",
+  message1: "%1",
+  args1: [{ type: "input_statement", name: "STACK" }],
+  previousStatement: null,
+  nextStatement: null,
+  tooltip: "Runs once after all sprite images have finished loading (before the first frame).",
   style: "hat_blocks",
 });
 
@@ -129,43 +142,76 @@ defineBlock({
 });
 
 defineBlock({
-  type: 'sprite_set_property',
-  message0: 'set %1 of sprite %2 to %3',
+  type: "sprite_set_property",
+  message0: "set %1 of sprite %2 to %3",
   args0: [
-    { type: 'field_dropdown', name: 'PROP', options: [['x', 'x'], ['y', 'y'], ['rotation', 'rotation'], ['speedX', 'speedX'], ['speedY', 'speedY']] },
-    { type: 'field_dropdown', name: 'NAME', options: generateSpriteDropdown },
-    { type: 'input_value', name: 'VALUE', check: 'Number' },
+    {
+      type: "field_dropdown",
+      name: "PROP",
+      options: [
+        ["x", "x"],
+        ["y", "y"],
+        ["rotation", "rotation"],
+        ["speedX", "speedX"],
+        ["speedY", "speedY"],
+  ["gravity", "gravity"],
+      ],
+    },
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+    { type: "input_value", name: "VALUE", check: "Number" },
   ],
   previousStatement: null,
   nextStatement: null,
   colour: SPRITE_COLOUR,
-  tooltip: 'Sets a property of a specified sprite.',
+  tooltip: "Sets a property of a specified sprite.",
 });
 
 defineBlock({
-  type: 'sprite_get_property',
-  message0: 'get %1 of sprite %2',
+  type: "sprite_get_property",
+  message0: "get %1 of sprite %2",
   args0: [
-    { type: 'field_dropdown', name: 'PROP', options: [['x', 'x'], ['y', 'y'], ['rotation', 'rotation'], ['width', 'width'], ['height', 'height']] },
-    { type: 'field_dropdown', name: 'NAME', options: generateSpriteDropdown },
+    {
+      type: "field_dropdown",
+      name: "PROP",
+      options: [
+        ["x", "x"],
+        ["y", "y"],
+        ["rotation", "rotation"],
+        ["width", "width"],
+        ["height", "height"],
+  ["speedX", "speedX"],
+  ["speedY", "speedY"],
+      ],
+    },
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
   ],
-  output: 'Number',
+  output: "Number",
   colour: SPRITE_COLOUR,
-  tooltip: 'Gets a property of a specified sprite.',
+  tooltip: "Gets a property of a specified sprite.",
 });
 
 defineBlock({
-  type: 'sprite_change_property',
-  message0: 'change %1 of sprite %2 by %3',
+  type: "sprite_change_property",
+  message0: "change %1 of sprite %2 by %3",
   args0: [
-    { type: 'field_dropdown', name: 'PROP', options: [['x', 'x'], ['y', 'y'], ['rotation', 'rotation']] },
-    { type: 'field_dropdown', name: 'NAME', options: generateSpriteDropdown },
-    { type: 'input_value', name: 'VALUE', check: 'Number' },
+    {
+      type: "field_dropdown",
+      name: "PROP",
+      options: [
+        ["x", "x"],
+        ["y", "y"],
+        ["rotation", "rotation"],
+  ["speedX", "speedX"],
+  ["speedY", "speedY"],
+      ],
+    },
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+    { type: "input_value", name: "VALUE", check: "Number" },
   ],
   previousStatement: null,
   nextStatement: null,
   colour: SPRITE_COLOUR,
-  tooltip: 'Changes a property of a sprite by a certain amount.',
+  tooltip: "Changes a property of a sprite by a certain amount.",
 });
 
 // --- Sensing Blocks ---
@@ -191,27 +237,160 @@ defineBlock({
   tooltip: "Checks if a specific key is currently held down.",
 });
 defineBlock({
-  type: 'sensing_sprite_collides',
-  message0: 'sprite %1 collides with sprite %2 ?',
+  type: "sensing_sprite_collides",
+  message0: "sprite %1 collides with sprite %2 ?",
   args0: [
-    { type: 'field_dropdown', name: 'SPRITE1', options: generateSpriteDropdown },
-    { type: 'field_dropdown', name: 'SPRITE2', options: generateSpriteDropdown },
+    {
+      type: "field_dropdown",
+      name: "SPRITE1",
+      options: generateSpriteDropdown,
+    },
+    {
+      type: "field_dropdown",
+      name: "SPRITE2",
+      options: generateSpriteDropdown,
+    },
   ],
-  output: 'Boolean',
+  output: "Boolean",
   colour: SENSING_COLOUR,
-  tooltip: 'Checks if two sprites are touching.',
+  tooltip: "Checks if two sprites are touching.",
+});
+defineBlock({
+  type: "sprite_show",
+  message0: "show sprite %1",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Makes a sprite visible.",
+});
+defineBlock({
+  type: "sprite_hide",
+  message0: "hide sprite %1",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Makes a sprite invisible.",
+});
+defineBlock({
+  type: "sprite_set_size",
+  message0: "set size of sprite %1 to %2 %%",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+    { type: "input_value", name: "SIZE", check: "Number" },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Sets the size of a sprite as a percentage of its original size.",
 });
 
-// --- Game State Blocks ---
 defineBlock({
-  type: "game_set_gravity",
-  message0: "set global gravity to %1",
-  args0: [{ type: "input_value", name: "GRAVITY", check: "Number" }],
+  type: "sprite_set_gravity",
+  message0: "set gravity of sprite %1 to %2",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+    { type: "input_value", name: "GRAV", check: "Number" },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Sets per-frame gravity acceleration of a sprite.",
+});
+
+defineBlock({
+  type: "sprite_jump",
+  message0: "make sprite %1 jump with speed %2",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+    { type: "input_value", name: "SPEED", check: "Number" },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Sets an immediate vertical speed (negative for upward).",
+});
+
+defineBlock({
+  type: "sprite_set_terminal_speed",
+  message0: "set terminal fall speed of sprite %1 to %2",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+    { type: "input_value", name: "TERM", check: "Number" },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Sets the maximum downward speed for a sprite.",
+});
+
+defineBlock({
+  type: "game_set_fixed_timestep",
+  message0: "%1 fixed timestep updates",
+  args0: [
+    {
+      type: "field_dropdown",
+      name: "ENABLED",
+      options: [
+        ["enable", "TRUE"],
+        ["disable", "FALSE"],
+      ],
+    },
+  ],
   previousStatement: null,
   nextStatement: null,
   colour: GAME_STATE_COLOUR,
-  tooltip: "Sets a downward force that affects all sprites.",
+  tooltip: "Enable or disable fixed 60fps physics step (disabling uses variable delta).",
 });
+
+defineBlock({
+  type: "sprite_use_global_gravity",
+  message0: "%1 global gravity for sprite %2",
+  args0: [
+    {
+      type: "field_dropdown",
+      name: "ENABLED",
+      options: [
+        ["enable", "TRUE"],
+        ["disable", "FALSE"],
+      ],
+    },
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Enable or disable the effect of global gravity on a sprite.",
+});
+
+defineBlock({
+  type: "sprite_bounce_on_edge",
+  message0: "if on edge, bounce sprite %1",
+  args0: [
+    { type: "field_dropdown", name: "NAME", options: generateSpriteDropdown },
+  ],
+  previousStatement: null,
+  nextStatement: null,
+  colour: SPRITE_COLOUR,
+  tooltip: "Reverses a sprite's direction if it hits the edge of the canvas.",
+});
+
+defineBlock({
+  type: "sound_play",
+  message0: "play sound from url %1",
+  args0: [{ type: "input_value", name: "URL", check: "String" }],
+  previousStatement: null,
+  nextStatement: null,
+  colour: "#A65C81", // A new color for sound
+  tooltip: "Plays a sound file from a URL.",
+});
+
+// --- Game State Blocks ---
 defineBlock({
   type: "game_change_score",
   message0: "change score by %1",

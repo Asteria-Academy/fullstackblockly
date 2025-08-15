@@ -52,27 +52,34 @@ const createSpriteButtonCallback = (button: Blockly.FlyoutButton) => {
   Blockly.Xml.domToWorkspace(xmlDom, workspace);
 };
 
-
 const spriteCategoryCallback = (workspace: Blockly.WorkspaceSvg): Blockly.utils.toolbox.FlyoutDefinition => {
   workspace.registerButtonCallback('CREATE_SPRITE', createSpriteButtonCallback);
 
   const spriteCreateBlocks = workspace.getBlocksByType('sprite_create', false);
 
-  if (spriteCreateBlocks.length === 0) {
-    const button: Blockly.utils.toolbox.ToolboxItemInfo = {
+  const blockList: Blockly.utils.toolbox.ToolboxItemInfo[] = [
+    {
       kind: 'button',
       text: 'Create Sprite',
       callbackkey: 'CREATE_SPRITE',
-    };
-    return [button];
-  }
-
-  const blockList: Blockly.utils.toolbox.ToolboxItemInfo[] = [
-    { kind: 'block', type: 'sprite_set_property' },
-    { kind: 'block', type: 'sprite_get_property' },
-    { kind: 'block', type: 'sprite_change_property' },
-    { kind: 'block', type: 'sensing_sprite_collides' },
+    }
   ];
+
+  if (spriteCreateBlocks.length > 0) {
+    blockList.push(
+      { kind: 'block', type: 'sprite_set_property' },
+      { kind: 'block', type: 'sprite_get_property' },
+      { kind: 'block', type: 'sprite_change_property' },
+      { kind: 'block', type: 'sprite_bounce_on_edge' },
+      { kind: 'sep', gap: '8'},
+      { kind: 'block', type: 'sprite_show' },
+      { kind: 'block', type: 'sprite_hide' },
+      { kind: 'block', type: 'sprite_set_size' },
+      { kind: 'sep', gap: '8'},
+      { kind: 'block', type: 'sensing_sprite_collides' },
+    );
+  }
+  
   return blockList;
 };
 

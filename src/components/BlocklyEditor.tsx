@@ -67,6 +67,44 @@ export default function BlocklyEditor() {
   const [isGameRunning, setIsGameRunning] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const gameCanvasRef = useRef<GameCanvasHandle>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const suppressChangeRef = useRef(false); // avoid recursive change events during programmatic loads
+
+  const serializeWorkspace = useCallback(() => {
+    if (!workspace) return null;
+    try {
+      return Blockly.serialization.workspaces.save(workspace);
+    } catch {
+      return null;
+    }
+  }, [workspace]);
+
+  const persistToLocalStorage = useCallback(() => {
+    const json = serializeWorkspace();
+    if (json) localStorage.setItem('blockly-workspace', JSON.stringify(json));
+  }, [serializeWorkspace]);
+
+  const loadWorkspaceJson = useCallback((data: unknown) => {
+    if (!data || typeof data !== 'object') return;
+    if (!workspace) return;
+    suppressChangeRef.current = true;
+    try {
+      workspace.clear();
+      Blockly.serialization.workspaces.load(data, workspace);
+      // refresh dynamic toolbox sprite dropdowns
+      const tb = workspace.getToolbox();
+      if (tb) tb.refreshSelection();
+      localStorage.setItem('blockly-workspace', JSON.stringify(data));
+      // Update generated code immediately
+      const code = javascriptGenerator.workspaceToCode(workspace);
+      setJsCode(code);
+    } catch (e) {
+      console.error('Failed to load workspace JSON', e);
+    } finally {
+      // small timeout to allow rendering updates
+      setTimeout(() => { suppressChangeRef.current = false; }, 0);
+    }
+  }, [workspace]);
 
   const toolbox = useMemo(() => ({
     ...coreToolbox,
@@ -84,7 +122,8 @@ export default function BlocklyEditor() {
   }, []);
 
   const onWorkspaceChange = useCallback((ws: Blockly.WorkspaceSvg) => {
-    if (isInitializing || ws.isDragging() || !ws.rendered) return;
+  if (suppressChangeRef.current) return; // programmatic load in progress
+  if (isInitializing || ws.isDragging() || !ws.rendered) return;
     
     const event = ws.getUndoStack()[ws.getUndoStack().length - 1];
     if (event && (event.type === Blockly.Events.BLOCK_CREATE || event.type === Blockly.Events.BLOCK_DELETE)) {
@@ -98,8 +137,7 @@ export default function BlocklyEditor() {
         }
     }
     
-    const json = Blockly.serialization.workspaces.save(ws);
-    localStorage.setItem('blockly-workspace', JSON.stringify(json));
+  persistToLocalStorage();
         
     javascriptGenerator.forBlock['text_print'] = function(block, generator) {
       const msg = generator.valueToCode(block, 'TEXT', Order.NONE) || "''";
@@ -107,22 +145,55 @@ export default function BlocklyEditor() {
     };
     const code = javascriptGenerator.workspaceToCode(ws);
     setJsCode(code);
-  }, [isInitializing]);
+  }, [isInitializing, persistToLocalStorage]);
 
   useEffect(() => {
     if (!workspace) return;
 
-    const savedData = localStorage.getItem('blockly-workspace');
-    try {
-      const json = savedData ? JSON.parse(savedData) : initialJson;
-      Blockly.serialization.workspaces.load(json, workspace);
-    } catch (e) {
-      console.error("Error loading workspace, using default.", e);
-      Blockly.serialization.workspaces.load(initialJson, workspace);
-    } finally {
-      setIsInitializing(false);
-    }
+    const getFirstSpriteName = (): string | null => {
+        const spriteCreateBlocks = workspace.getBlocksByType('sprite_create', false);
+        if (spriteCreateBlocks.length > 0) {
+            const firstSpriteNameBlock = spriteCreateBlocks[0].getInputTargetBlock('NAME');
+            if (firstSpriteNameBlock) {
+                return firstSpriteNameBlock.getFieldValue('TEXT');
+            }
+        }
+        return null;
+    };
+
+    const handleBlockCreate = (event: Blockly.Events.Abstract) => {
+      if (event.type === Blockly.Events.BLOCK_CREATE) {
+        const createEvent = event as Blockly.Events.BlockCreate;
+        const block = workspace.getBlockById(createEvent.blockId || '');
+
+        if (block && block.type.startsWith('sprite_') && block.type !== 'sprite_create') {
+          const nameField = block.getField('NAME') as Blockly.FieldDropdown | null;
+          if (nameField && nameField.getValue() === 'NULL_SPRITE') {
+            const firstSprite = getFirstSpriteName();
+            if (firstSprite) {
+              nameField.setValue(firstSprite);
+            }
+          }
+        }
+      }
+    };
+
+    workspace.addChangeListener(handleBlockCreate);
+    return () => workspace.removeChangeListener(handleBlockCreate);
   }, [workspace]);
+
+  useEffect(() => {
+    if (!workspace) return;
+    const savedData = localStorage.getItem('blockly-workspace');
+    let json; 
+    try {
+      json = savedData ? JSON.parse(savedData) : initialJson;
+    } catch {
+      json = initialJson;
+    }
+    loadWorkspaceJson(json);
+    setIsInitializing(false);
+  }, [workspace, loadWorkspaceJson]);
   
   const addLog = useCallback((message: string) => {
     setLogs(prev => [...prev, message]);
@@ -196,6 +267,48 @@ export default function BlocklyEditor() {
                 Stop
             </button>
           )}
+          <button
+            onClick={() => {
+              if (!workspace) return;
+              const json = serializeWorkspace();
+              if (!json) return;
+              const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'blockly-workspace.json';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            className="rounded-md border bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-800 shadow-sm hover:bg-blue-200"
+          >Save</button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-md border bg-purple-100 px-3 py-1.5 text-sm font-medium text-purple-800 shadow-sm hover:bg-purple-200"
+          >Load</button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file || !workspace) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  const data = JSON.parse(reader.result as string);
+                  loadWorkspaceJson(data);
+                  addLog('Workspace loaded.');
+                } catch {
+                  addErrorLog('Failed to load workspace file.');
+                }
+              };
+              reader.readAsText(file);
+            }}
+          />
         </div>
         <div className="flex-grow" style={{ position: 'relative' }}>
           <BlocklyWorkspace

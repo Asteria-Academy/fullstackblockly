@@ -9,6 +9,7 @@ export const gameToolboxCategories = [
     contents: [
       { kind: 'block', type: 'game_on_start' },
       { kind: 'block', type: 'game_on_tick' },
+  { kind: 'block', type: 'game_on_assets_loaded' },
     ],
   },
   {
@@ -16,6 +17,16 @@ export const gameToolboxCategories = [
     name: 'Sprites',
     colour: '#4C97FF',
     custom: 'SPRITE'
+  },
+  {
+    kind: 'category',
+    name: 'Sprite Physics',
+    colour: '#4C97FF',
+    contents: [
+      { kind: 'block', type: 'sprite_set_gravity' },
+      { kind: 'block', type: 'sprite_set_terminal_speed' },
+      { kind: 'block', type: 'sprite_jump' },
+    ],
   },
   {
     kind: 'category',
@@ -31,9 +42,9 @@ export const gameToolboxCategories = [
     name: 'Game State',
     colour: '#CF8B17',
     contents: [
-      { kind: 'block', type: 'game_set_gravity' },
       { kind: 'block', type: 'game_change_score' },
       { kind: 'block', type: 'game_get_score' },
+  { kind: 'block', type: 'game_set_fixed_timestep' },
     ],
   },
   {
